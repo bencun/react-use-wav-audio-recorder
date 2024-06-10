@@ -7,6 +7,7 @@ async function wavBlobToMp3Blob(blob: Blob) {
   // @ts-expect-error - No idea
   const wavDecoder = lamejs.WavHeader.readHeader(dataView);
   // now we split the ArrayBuffer into two channels when we have two channels (rip my sanity 2024)
+  // e.g. on my machine Chrome and Firefox recorded in mono by default while Safari recorded in stereo
   const numberOfChannels = wavDecoder.channels as number;
   const bytesPerSample = numberOfChannels * 2;
   const numberOfSamples = ((arrayBuffer.byteLength - wavDecoder.dataOffset) / 2);
