@@ -1,6 +1,6 @@
 # React WAV audio recorder
 
-This is a simple React hook that uses `extendable-media-recorder` and `extendable-media-recorder-wav-encoder` under the hood to record raw WAV audio in a cross-browser compatible manner and spits out a Blob.
+This is a simple React hook that uses [`extendable-media-recorder`](https://www.npmjs.com/package/extendable-media-recorder) and [extendable-media-recorder-wav-encoder](https://www.npmjs.com/package/extendable-media-recorder-wav-encoder) under the hood to record raw WAV audio in a cross-browser compatible manner and spits out a Blob.
 
 ## Usage
 
@@ -40,7 +40,7 @@ function MyComponent() {
 ```
 
 ## MP3 compression
-There's also a utility hook called `useWavToMp3Worker` that uses `@breezystack/lamejs` to encode the WAV into an MP3 file in a Web Worker so that the main thread isn't blocked during the encoding process.
+There's also a utility hook called `useWavToMp3Worker` that uses [@breezystack/lamejs](https://www.npmjs.com/package/@breezystack/lamejs) to encode the WAV into an MP3 file in a Web Worker so that the main thread isn't blocked during the encoding process.
 
 The bitrate of the MP3 is currently fixed to 256 Kbps but this will be made into a parametrized value in the future (feel free to open a PR!).
 The worker is also set to terminate after 60 seconds.
