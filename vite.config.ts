@@ -13,6 +13,7 @@ export default defineConfig({
     }),
     react(),
   ],
+  base: './',
   publicDir: false,
   build: {
     emptyOutDir: true,
