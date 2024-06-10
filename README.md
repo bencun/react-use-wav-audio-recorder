@@ -43,6 +43,7 @@ function MyComponent() {
 There's also a utility hook called `useWavToMp3Worker` that uses `@breezystack/lamejs` to encode the WAV into an MP3 file in a Web Worker so that the main thread isn't blocked during the encoding process.
 
 The bitrate of the MP3 is currently fixed to 256 Kbps but this will be made into a parametrized value in the future (feel free to open a PR!).
+The worker is also set to terminate after 60 seconds.
 
 ### Usage
 
