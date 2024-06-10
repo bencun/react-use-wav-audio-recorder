@@ -9,6 +9,7 @@ export default defineConfig({
     dts({
       insertTypesEntry: true,
       copyDtsFiles: true,
+      rollupTypes: true,
     }),
     react(),
   ],
