@@ -1,6 +1,5 @@
 {
   "name": "react-use-wav-audio-recorder",
-  "private": "false",
   "version": "0.0.1",
   "type": "module",
   "scripts": {
@@ -13,6 +12,9 @@
       "types": "./dist/index.d.ts"
     }
   },
+  "files": [
+    "dist/**/*"
+  ],
   "peerDependencies": {
     "react": "18.2.0",
     "react-dom": "18.2.0"
