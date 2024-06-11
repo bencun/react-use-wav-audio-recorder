@@ -1,6 +1,7 @@
 {
   "name": "react-use-wav-audio-recorder",
-  "version": "0.0.5",
+  "version": "0.0.6",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "build": "tsc && vite build",
