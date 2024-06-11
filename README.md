@@ -1,6 +1,6 @@
-# React WAV audio recorder
+# React useWavAudioRecorder
 
-This is a simple React hook that uses [`extendable-media-recorder`](https://www.npmjs.com/package/extendable-media-recorder) and [extendable-media-recorder-wav-encoder](https://www.npmjs.com/package/extendable-media-recorder-wav-encoder) under the hood to record raw WAV audio in a cross-browser compatible manner and spits out a Blob.
+This is a simple React hook that uses [`extendable-media-recorder`](https://www.npmjs.com/package/extendable-media-recorder) and [extendable-media-recorder-wav-encoder](https://www.npmjs.com/package/extendable-media-recorder-wav-encoder) under the hood to record raw WAV audio in a cross-browser compatible manner. It produces a Blob of the WAV audio.
 
 ## Usage
 
@@ -40,12 +40,13 @@ function MyComponent() {
 ```
 
 ## MP3 compression
-There's also a utility hook called `useWavToMp3Worker` that uses [@breezystack/lamejs](https://www.npmjs.com/package/@breezystack/lamejs) to encode the WAV into an MP3 file in a Web Worker so that the main thread isn't blocked during the encoding process.
+There's also a utility hook called `useWavToMp3Worker` that uses [@breezystack/lamejs](https://www.npmjs.com/package/@breezystack/lamejs) to encode the WAV into an MP3 file using a Web Worker so that the main thread isn't blocked during the encoding process.
 
 The bitrate of the MP3 is currently fixed to 256 Kbps but this will be made into a parametrized value in the future (feel free to open a PR!).
-The worker is also set to terminate after 60 seconds.
 
-## Web Worker issues with Vite
+The worker is also set to terminate after 60 seconds (feel free to open a PR to parametrize this as well).
+
+### Web Worker issues with Vite
 
 Vite has some [issues](https://github.com/vitejs/vite/discussions/15547) with resolving the library-mode-bundled Web Workers. In order for the Web Worker to work properly during development you should add this to your `vite.config.ts` `optimizeDeps.exclude` field:
 
@@ -81,4 +82,4 @@ const {
 ```
 
 ## Credits
-The article [text](https://franzeus.medium.com/record-audio-in-js-and-upload-as-wav-or-mp3-file-to-your-backend-1a2f35dea7e8) that was used for the initial implementation and inspired the creation of these hooks.
+Here's a great [article](https://franzeus.medium.com/record-audio-in-js-and-upload-as-wav-or-mp3-file-to-your-backend-1a2f35dea7e8) that was used for the initial implementation of the MP3 encoder and inspired the creation of these hooks.
