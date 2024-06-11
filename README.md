@@ -2,6 +2,14 @@
 
 This is a simple React hook that uses [`extendable-media-recorder`](https://www.npmjs.com/package/extendable-media-recorder) and [extendable-media-recorder-wav-encoder](https://www.npmjs.com/package/extendable-media-recorder-wav-encoder) under the hood to record raw WAV audio in a cross-browser compatible manner. It produces a Blob of the WAV audio.
 
+## Installation
+
+Install as `react-use-wav-audio-recorder` from NPM:
+
+```sh
+pnpm i react-use-wav-audio-recorder
+```
+
 ## Usage
 
 ```typescript
