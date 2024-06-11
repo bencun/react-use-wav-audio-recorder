@@ -45,6 +45,23 @@ There's also a utility hook called `useWavToMp3Worker` that uses [@breezystack/l
 The bitrate of the MP3 is currently fixed to 256 Kbps but this will be made into a parametrized value in the future (feel free to open a PR!).
 The worker is also set to terminate after 60 seconds.
 
+## Web Worker issues with Vite
+
+Vite has some [issues](https://github.com/vitejs/vite/discussions/15547) with resolving the library-mode-bundled Web Workers. In order for the Web Worker to work properly during development you should add this to your `vite.config.ts` `optimizeDeps.exclude` field:
+
+```typescript
+export default defineConfig({
+  // ...
+  optimizeDeps: {
+    exclude: ['react-use-wav-audio-recorder']
+  }
+  // ...
+})
+
+```
+
+In production builds everything seems to be working just fine without the `optimizeDeps.exclude` entry.
+
 ### Usage
 
 ```typescript
