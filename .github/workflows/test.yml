@@ -16,7 +16,8 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-24.04
+    # Exercise the native media APIs used by the Firefox and WebKit recording tests.
+    runs-on: macos-26
     timeout-minutes: 20
 
     steps:
@@ -35,8 +36,8 @@ jobs:
       - name: Run unit tests
         run: pnpm test
 
-      - name: Install Playwright browsers and system dependencies
-        run: pnpm exec playwright install --with-deps chromium firefox webkit
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install chromium firefox webkit
 
       - name: Run Playwright tests
         id: playwright
