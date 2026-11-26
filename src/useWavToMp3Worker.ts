@@ -70,7 +70,7 @@ function runWorker(blob: Blob, job: Job) {
 
 export function useWavToMp3Worker(props: Props) {
   const [inProgress, setInProgress] = useState(false);
-  const active = useRef<Job>();
+  const active = useRef<Job | undefined>(undefined);
   const mounted = useRef(true);
   const callbacks = useRef(props);
 

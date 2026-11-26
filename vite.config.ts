@@ -18,13 +18,13 @@ export default defineConfig({
     emptyOutDir: true,
     lib: {
       entry: {
-        index: path.resolve(__dirname, 'src/index.ts'),
+        index: path.resolve(import.meta.dirname, 'src/index.ts'),
       },
       name: 'react-use-wav-audio-recorder',
       formats: ['es'],
       fileName: (format, entryName) => `${entryName}.${format}.js`,
     },
-    rollupOptions: {
+    rolldownOptions: {
       external: ['react', 'react-dom'],
       output: {
         banner: (chunk) => chunk.isEntry ? "'use client';" : '',

@@ -23,7 +23,6 @@
   "include": [
     "src",
     "tests",
-    "vite.config.ts",
-  ],
-  "references": [{ "path": "./tsconfig.node.json" }]
+    "vite.config.ts"
+  ]
 }

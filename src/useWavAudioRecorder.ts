@@ -75,7 +75,7 @@ function asError(value: unknown) {
 
 export function useWavAudioRecorder(props: Props) {
   const [recording, setRecording] = useState(false);
-  const active = useRef<Session>();
+  const active = useRef<Session | undefined>(undefined);
   const mounted = useRef(true);
   const callbacks = useRef(props);
 
