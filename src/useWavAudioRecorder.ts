@@ -1,12 +1,6 @@
-'use client';
-
-import {
-  useCallback, useRef, useState,
-} from 'react';
-import {
-  MediaRecorder as ExtendableMediaRecorder, IBlobEvent, IMediaRecorder, register,
-} from 'extendable-media-recorder';
-import { connect } from 'extendable-media-recorder-wav-encoder';
+import { useCallback, useRef, useState } from 'react';
+import type { IBlobEvent, IMediaRecorder } from 'extendable-media-recorder';
+import { useCommittedEffect } from './useCommittedEffect';
 
 type Props = {
   onComplete: (recording: Blob) => void;
@@ -15,97 +9,222 @@ type Props = {
   onOtherError?: (e?: Error) => void;
 };
 
+type Session = {
+  stream?: MediaStream;
+  recorder?: IMediaRecorder;
+  detach?: () => void;
+  stopping?: boolean;
+  stopTimeout?: ReturnType<typeof setTimeout>;
+  chunks: Blob[];
+};
+
 const MIME_TYPE = 'audio/wav';
+const STOP_TIMEOUT_MS = 30_000;
 
-export function useWavAudioRecorder({
-  onComplete, onNoPermissionError, onNotSupportedError, onOtherError,
-}: Props) {
-  const [recording, setRecording] = useState<boolean>(false);
-  const mediaRecorder = useRef<IMediaRecorder>();
-  const chunks = useRef<Blob[]>([]);
-  const stream = useRef<MediaStream>();
+async function loadRecorder() {
+  const { MediaRecorder, register } = await import('extendable-media-recorder');
+  if (!MediaRecorder.isTypeSupported(MIME_TYPE)) {
+    const { connect } = await import('extendable-media-recorder-wav-encoder');
+    const port = await connect();
+    try {
+      await register(port);
+    } catch (error) {
+      port.close();
+      throw error;
+    }
+  }
+  return MediaRecorder;
+}
 
-  const getStream = useCallback(async () => {
-    if (navigator?.mediaDevices?.getUserMedia) {
-      // custom WAV codec registration first
-      // this code prevents this being initialized multiple times
-      // since there's no way to deregister currently
-      // https://github.com/chrisguttandin/extendable-media-recorder/issues/680
-      connect().then(async (port) => {
-        if (!ExtendableMediaRecorder.isTypeSupported('audio/wav')) {
-          await register(port);
+let recorderReady: ReturnType<typeof loadRecorder> | undefined;
+
+function getRecorder() {
+  recorderReady ??= loadRecorder().catch((error: unknown) => {
+    recorderReady = undefined;
+    throw error;
+  });
+  return recorderReady;
+}
+
+function releaseTracks(stream?: MediaStream) {
+  stream?.getTracks().forEach((track) => track.stop());
+}
+
+function cleanup(session: Session, abort: boolean) {
+  clearTimeout(session.stopTimeout);
+  session.detach?.();
+  try {
+    if (abort && session.recorder && session.recorder.state !== 'inactive') {
+      session.recorder.stop();
+    }
+  } finally {
+    releaseTracks(session.stream);
+    session.chunks.length = 0;
+  }
+}
+
+function asError(value: unknown) {
+  if (value instanceof Error) return value;
+  if (value instanceof DOMException) {
+    const error = new Error(value.message);
+    error.name = value.name;
+    return error;
+  }
+  return new Error(String(value));
+}
+
+export function useWavAudioRecorder(props: Props) {
+  const [recording, setRecording] = useState(false);
+  const active = useRef<Session>();
+  const mounted = useRef(true);
+  const callbacks = useRef(props);
+
+  useCommittedEffect(() => {
+    callbacks.current = props;
+  });
+
+  useCommittedEffect(() => {
+    mounted.current = true;
+    setRecording(Boolean(active.current?.recorder && !active.current.stopping));
+    return () => {
+      mounted.current = false;
+      const session = active.current;
+      active.current = undefined;
+      if (session) {
+        try {
+          cleanup(session, true);
+        } catch {
+          // The component is gone and cleanup has already released its tracks.
         }
-      });
-      stream.current = await navigator.mediaDevices.getUserMedia({ audio: true });
-    } else {
-      onNotSupportedError?.();
-    }
-  }, [onNotSupportedError]);
-
-  const closeStream = useCallback(async () => {
-    stream.current?.getTracks().forEach((t) => t.stop());
+      }
+    };
   }, []);
 
-  const dataAvailableHandler = useCallback((e: IBlobEvent) => {
-    if (e.data.size) chunks.current.push(e.data);
-  }, []);
-
-  const stopHandler = useCallback(async () => {
-    // for some reason this gets called multiple times
-    // (maybe because we're stopping stream tracks as well)
-    // so we check if there's any actual data to process first
-    if (chunks.current?.length) {
-      const blob = new Blob(chunks.current, { type: MIME_TYPE });
-      chunks.current = [];
-      onComplete(blob);
+  const finish = useCallback((session: Session, abort: boolean) => {
+    if (active.current !== session) return;
+    active.current = undefined;
+    setRecording(false);
+    try {
+      cleanup(session, abort);
+    } catch {
+      // Preserve the original recorder failure after releasing its tracks.
     }
-  }, [onComplete]);
+  }, []);
 
   const startRecording = useCallback(async () => {
-    // this is an unexpected scenario so we throw an error for visibility
-    if (mediaRecorder.current) {
-      onOtherError?.(new Error('Media recorder already instantiated'));
+    if (!mounted.current) return;
+    if (active.current) {
+      callbacks.current.onOtherError?.(new Error('A recording is already in progress.'));
       return;
     }
-    try {
-      await getStream();
-      // if the stream isn't available due to perms issues we fail
-      if (!stream.current) {
-        throw new Error();
-      }
-    } catch (e) {
-      onNoPermissionError?.();
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {
+      callbacks.current.onNotSupportedError?.();
       return;
     }
 
-    mediaRecorder.current = stream ? new ExtendableMediaRecorder(stream.current, { mimeType: MIME_TYPE }) : undefined;
-    if (mediaRecorder.current) {
-      mediaRecorder.current.addEventListener('dataavailable', dataAvailableHandler);
-      mediaRecorder.current.addEventListener('stop', stopHandler);
-      mediaRecorder.current.start(100);
-      setRecording(true);
-    } else {
-      closeStream();
-      onOtherError?.(new Error('startRecording: Failed to instantiate MediaRecorder'));
+    const session: Session = { chunks: [] };
+    active.current = session;
+
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (value) {
+      if (active.current !== session) return;
+      finish(session, true);
+      const error = asError(value);
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        callbacks.current.onNoPermissionError?.();
+      } else {
+        callbacks.current.onOtherError?.(error);
+      }
+      return;
     }
-  }, [closeStream, dataAvailableHandler, getStream, onNoPermissionError, onOtherError, stopHandler]);
+
+    if (active.current !== session) {
+      releaseTracks(stream);
+      return;
+    }
+    session.stream = stream;
+
+    try {
+      const Recorder = await getRecorder();
+      if (active.current !== session) return;
+
+      const recorder = new Recorder(stream, { mimeType: MIME_TYPE });
+      session.recorder = recorder;
+
+      const onData = (event: IBlobEvent) => {
+        if (active.current === session && event.data.size) session.chunks.push(event.data);
+      };
+      const onStop = () => {
+        if (active.current !== session) return;
+        const blob = session.chunks.length ? new Blob(session.chunks, { type: MIME_TYPE }) : undefined;
+        finish(session, false);
+        if (!blob) return;
+        try {
+          void Promise.resolve(callbacks.current.onComplete(blob)).catch((error: unknown) => {
+            if (mounted.current) callbacks.current.onOtherError?.(asError(error));
+          });
+        } catch (error) {
+          callbacks.current.onOtherError?.(asError(error));
+        }
+      };
+      const onError = (event: Event) => {
+        if (active.current !== session) return;
+        finish(session, true);
+        const error = 'error' in event ? event.error : undefined;
+        callbacks.current.onOtherError?.(asError(error ?? 'Audio recording failed.'));
+      };
+      session.detach = () => {
+        recorder.removeEventListener('dataavailable', onData);
+        recorder.removeEventListener('stop', onStop);
+        recorder.removeEventListener('error', onError);
+      };
+      recorder.addEventListener('dataavailable', onData);
+      recorder.addEventListener('stop', onStop);
+      recorder.addEventListener('error', onError);
+      recorder.start();
+      if (active.current === session) setRecording(true);
+    } catch (value) {
+      if (active.current !== session) return;
+      finish(session, true);
+      const error = asError(value);
+      if (error.name === 'NotSupportedError') {
+        callbacks.current.onNotSupportedError?.();
+      } else {
+        callbacks.current.onOtherError?.(error);
+      }
+    }
+  }, [finish]);
 
   const stopRecording = useCallback(() => {
-    if (mediaRecorder.current) {
-      mediaRecorder.current.stop();
-      mediaRecorder.current.removeEventListener('dataavailable', dataAvailableHandler);
-      mediaRecorder.current.addEventListener('stop', stopHandler);
-      closeStream();
-      setRecording(false);
-      mediaRecorder.current = undefined;
-    } else {
-      onOtherError?.(new Error('stopRecording: MediaRecorder unavailable.'));
+    if (!mounted.current) return;
+    const session = active.current;
+    if (!session) {
+      callbacks.current.onOtherError?.(new Error('No recording is in progress.'));
+      return;
     }
-  }, [closeStream, dataAvailableHandler, onOtherError, stopHandler]);
+    if (!session.recorder) {
+      finish(session, true);
+      return;
+    }
+    if (session.stopping) return;
+    session.stopping = true;
+    setRecording(false);
+    session.stopTimeout = setTimeout(() => {
+      if (active.current !== session) return;
+      finish(session, true);
+      callbacks.current.onOtherError?.(new Error('The recorder did not finish stopping.'));
+    }, STOP_TIMEOUT_MS);
 
-  return {
-    recording,
-    startRecording,
-    stopRecording,
-  };
+    try {
+      if (session.recorder.state !== 'inactive') session.recorder.stop();
+    } catch (error) {
+      if (active.current !== session) return;
+      finish(session, false);
+      callbacks.current.onOtherError?.(asError(error));
+    }
+  }, [finish]);
+
+  return { recording, startRecording, stopRecording };
 }

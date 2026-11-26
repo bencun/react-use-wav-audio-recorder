@@ -7,9 +7,8 @@ import path from 'node:path';
 export default defineConfig({
   plugins: [
     dts({
-      insertTypesEntry: true,
-      copyDtsFiles: true,
-      rollupTypes: true,
+      entryRoot: 'src',
+      include: ['src/index.ts', 'src/useWavAudioRecorder.ts', 'src/useWavToMp3Worker.ts'],
     }),
     react(),
   ],
@@ -28,6 +27,7 @@ export default defineConfig({
     rollupOptions: {
       external: ['react', 'react-dom'],
       output: {
+        banner: (chunk) => chunk.isEntry ? "'use client';" : '',
         globals: {
           react: 'React',
           'react-dom': 'ReactDOM',
