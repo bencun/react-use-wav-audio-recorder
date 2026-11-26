@@ -3,8 +3,22 @@ name: Tests
 on:
   push:
     branches: [main]
+    paths: &test-paths
+      - 'src/**'
+      - 'e2e/**'
+      - 'tests/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.npmrc'
+      - 'tsconfig*.json'
+      - 'vite.config.*'
+      - 'vitest.config.*'
+      - 'playwright.config.*'
+      - '.github/workflows/test.yml'
   pull_request:
     branches: [main]
+    paths: *test-paths
   workflow_dispatch:
 
 permissions:
