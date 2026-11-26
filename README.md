@@ -75,6 +75,8 @@ export default defineConfig({
 
 Run `pnpm test` for unit tests. Install the Playwright browsers once with `pnpm exec playwright install chromium firefox webkit`, then run `pnpm test:e2e`. The browser tests exercise the packed library in a Vite development server and production build. Chromium and Firefox use fake microphones, and WebKit uses a synthetic audio stream.
 
+For manual testing, run `pnpm dev:e2e` and open the printed localhost URL. To test the production bundle, run `pnpm build:e2e` followed by `pnpm preview:e2e`. Both modes use the packed library and your browser's real microphone permission flow. Restart the dev command or rebuild the production app after changing the library or fixture.
+
 ## Credits
 
 The initial MP3 encoder was inspired by [Record Audio in JS and Upload as WAV or MP3 File to Your Backend](https://franzeus.medium.com/record-audio-in-js-and-upload-as-wav-or-mp3-file-to-your-backend-1a2f35dea7e8).

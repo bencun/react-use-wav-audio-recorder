@@ -1,0 +1,83 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #20262d;
+  background: #f6f7f8;
+}
+
+body {
+  margin: 0;
+  padding: clamp(1rem, 5vw, 3rem);
+}
+
+main {
+  display: grid;
+  gap: 1.25rem;
+  max-width: 48rem;
+  margin: auto;
+}
+
+h1, h2 {
+  margin: 0;
+}
+
+h1 {
+  font-size: 1.5rem;
+}
+
+h2 {
+  font-size: 1rem;
+}
+
+.recorder-controls, .audio-file {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid #dbe0e5;
+  border-radius: 0.5rem;
+  background: #fff;
+}
+
+.actions, .audio-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.audio-file {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+audio {
+  width: 100%;
+}
+
+button, .download {
+  font: inherit;
+  line-height: 1.25;
+  border: 1px solid #bfc7cf;
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  color: inherit;
+  background: #f6f7f8;
+}
+
+button:enabled, .download {
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.55;
+}
+
+.audio-file button, .download {
+  justify-self: start;
+}
+
+.download {
+  text-decoration: none;
+}
+
+button:enabled:hover, .download:hover {
+  background: #e9edf1;
+}
