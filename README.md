@@ -77,6 +77,14 @@ Run `pnpm test` for unit tests. Install the Playwright browsers once with `pnpm 
 
 For manual testing, run `pnpm dev:e2e` and open the printed localhost URL. To test the production bundle, run `pnpm build:e2e` followed by `pnpm preview:e2e`. Both modes use the packed library and your browser's real microphone permission flow. Restart the dev command or rebuild the production app after changing the library or fixture.
 
+## Releasing
+
+Bump the version in a release branch and merge it into `main` through a pull request. After merging, switch to `main`, pull with `git pull --ff-only`, and run `./scripts/release.sh` from a clean checkout. Install the Playwright browsers first if needed, as described above.
+
+The script runs the checks, builds the library, and lists the contents of a tarball in a temporary directory. Review those contents and run the printed `npm publish` command when ready. Sign in with `npm login` if needed and complete npm's two-factor prompt.
+
+After publishing, use `npm view react-use-wav-audio-recorder dist-tags --json` to confirm that `latest` points to the release. Tag the published commit with `git tag -s v<version> -m "Release <version>"` and push that tag to `origin`.
+
 ## Credits
 
 The initial MP3 encoder was inspired by [Record Audio in JS and Upload as WAV or MP3 File to Your Backend](https://franzeus.medium.com/record-audio-in-js-and-upload-as-wav-or-mp3-file-to-your-backend-1a2f35dea7e8).
