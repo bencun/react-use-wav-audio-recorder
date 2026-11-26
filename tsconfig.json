@@ -22,8 +22,7 @@
   },
   "include": [
     "src",
-    "vite.config.ts",
-    "styled-system",
-  ],
-  "references": [{ "path": "./tsconfig.node.json" }]
+    "tests",
+    "vite.config.ts"
+  ]
 }

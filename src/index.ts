@@ -1,2 +1,2 @@
-export * from './useWavAudioRecorder';
-export * from './useWavToMp3Worker';
+export * from './useWavAudioRecorder.js';
+export * from './useWavToMp3Worker.js';

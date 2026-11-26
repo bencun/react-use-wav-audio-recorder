@@ -7,9 +7,8 @@ import path from 'node:path';
 export default defineConfig({
   plugins: [
     dts({
-      insertTypesEntry: true,
-      copyDtsFiles: true,
-      rollupTypes: true,
+      entryRoot: 'src',
+      include: ['src/index.ts', 'src/useWavAudioRecorder.ts', 'src/useWavToMp3Worker.ts'],
     }),
     react(),
   ],
@@ -19,15 +18,16 @@ export default defineConfig({
     emptyOutDir: true,
     lib: {
       entry: {
-        index: path.resolve(__dirname, 'src/index.ts'),
+        index: path.resolve(import.meta.dirname, 'src/index.ts'),
       },
       name: 'react-use-wav-audio-recorder',
       formats: ['es'],
       fileName: (format, entryName) => `${entryName}.${format}.js`,
     },
-    rollupOptions: {
+    rolldownOptions: {
       external: ['react', 'react-dom'],
       output: {
+        banner: (chunk) => chunk.isEntry ? "'use client';" : '',
         globals: {
           react: 'React',
           'react-dom': 'ReactDOM',

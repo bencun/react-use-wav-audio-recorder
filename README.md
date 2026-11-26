@@ -1,93 +1,82 @@
 # React useWavAudioRecorder
 
-This is a simple React hook that uses [`extendable-media-recorder`](https://www.npmjs.com/package/extendable-media-recorder) and [extendable-media-recorder-wav-encoder](https://www.npmjs.com/package/extendable-media-recorder-wav-encoder) under the hood to record raw WAV audio in a cross-browser compatible manner. It produces a Blob of the WAV audio.
+`useWavAudioRecorder` records microphone input as a WAV Blob using [extendable-media-recorder](https://www.npmjs.com/package/extendable-media-recorder) and its [WAV encoder](https://www.npmjs.com/package/extendable-media-recorder-wav-encoder). Microphone access requires a secure context such as HTTPS or localhost.
 
 ## Installation
 
-Install as `react-use-wav-audio-recorder` from NPM:
-
 ```sh
-pnpm i react-use-wav-audio-recorder
+pnpm add react-use-wav-audio-recorder
 ```
 
-## Usage
+## Record a WAV
 
-```typescript
-function MyComponent() {
+```tsx
+'use client';
+
+import { useState } from 'react';
+import { useWavAudioRecorder } from 'react-use-wav-audio-recorder';
+
+export function Recorder() {
   const [audioBlob, setAudioBlob] = useState<Blob>();
-  
-  const {
-    // recording status flag
-    recording,
-    // a method to start the permission grant flow and start recording immediately afterwards
-    startRecording,
-    // a method to stop the recording
-    stopRecording
-    } = useWavAudioRecorder({
-    onComplete: async (blob) => {
-      // store the blob
-      setAudioBlob(setAudioUrl(window.URL.createObjectURL(blob)));
-      // ... or you can convert it to an object URL so it can be assigned to an <audio> element
-      // setAudioUrl(window.URL.createObjectURL(blob));
-      // ... or you can turn it to a File so you can upload it later etc.
-      // const file = new File([blob], 'recording.wav');
-    },
-    onNoPermissionError: () => {
-      // Called when recording permissions coudln't be obtained
-    },
-    onNotSupportedError: () => {
-      // Called when browser doesn't support recording
-    },
-    onOtherError: (e) => {
-      // Called on any other unexpected errors
-    },
+  const [error, setError] = useState('');
+
+  const { recording, startRecording, stopRecording } = useWavAudioRecorder({
+    onComplete: setAudioBlob,
+    onNoPermissionError: () => setError('Microphone access was denied.'),
+    onNotSupportedError: () => setError('Audio recording is unavailable.'),
+    onOtherError: (cause) => setError(cause?.message ?? 'Recording failed.'),
   });
 
-  // ...wire up the props to buttons etc.
+  return (
+    <>
+      <button onClick={() => void startRecording()} disabled={recording}>Record</button>
+      <button onClick={stopRecording} disabled={!recording}>Stop</button>
+      {audioBlob && <p>Recorded {audioBlob.size} bytes.</p>}
+      {error && <p role="alert">{error}</p>}
+    </>
+  );
 }
 ```
 
-## MP3 compression
-There's also a utility hook called `useWavToMp3Worker` that uses [@breezystack/lamejs](https://www.npmjs.com/package/@breezystack/lamejs) to encode the WAV into an MP3 file using a Web Worker so that the main thread isn't blocked during the encoding process.
+Wait for `onComplete` before starting another recording after Stop. It receives the finalized WAV Blob after the browser delivers the last audio data. If the recorder takes more than 30 seconds to finish stopping, the hook releases the microphone and calls `onOtherError`. Calling `stopRecording` during startup cancels that attempt. Unmounting releases the microphone and discards any unfinished recording.
 
-The bitrate of the MP3 is currently fixed to 256 Kbps but this will be made into a parametrized value in the future (feel free to open a PR!).
+## Convert WAV to MP3
 
-The worker is also set to terminate after 60 seconds (feel free to open a PR to parametrize this as well).
+`useWavToMp3Worker` uses [@breezystack/lamejs](https://www.npmjs.com/package/@breezystack/lamejs) in a Web Worker. It accepts mono or stereo 16-bit PCM WAV Blobs and requests 256 kbps from the encoder. The worker terminates when conversion settles or the hook unmounts. Conversion reports an error if the worker has not replied within 60 seconds.
 
-### Web Worker issues with Vite
+```tsx
+import { useWavToMp3Worker } from 'react-use-wav-audio-recorder';
 
-Vite has some [issues](https://github.com/vitejs/vite/discussions/15547) with resolving the library-mode-bundled Web Workers. In order for the Web Worker to work properly during development you should add this to your `vite.config.ts` `optimizeDeps.exclude` field:
+const { convert, inProgress } = useWavToMp3Worker({
+  onComplete: (mp3Blob) => {
+    // Store or upload the MP3 Blob.
+  },
+  onError: (cause) => {
+    console.error(cause);
+  },
+});
 
-```typescript
-export default defineConfig({
-  // ...
-  optimizeDeps: {
-    exclude: ['react-use-wav-audio-recorder']
-  }
-  // ...
-})
-
+// Call convert(wavBlob) to start encoding.
 ```
 
-In production builds everything seems to be working just fine without the `optimizeDeps.exclude` entry.
+### Vite development
 
-### Usage
+Exclude the package from dependency optimization so Vite resolves its bundled worker asset during development.
 
-```typescript
-const {
-  // a method to start the encoding process, accepts a Blob
-  convert,
-  // a flag telling you if the process is in progress
-  inProgress
-} = useWavToMp3Worker({
-  onComplete: async (blob) => {
-    // here you grab the processed blob just like with the WAV recording and do whatever you please with it
-  },
-  onError: (e) => {
-    // this is called if any errors occur
+```ts
+export default defineConfig({
+  optimizeDeps: {
+    exclude: ['react-use-wav-audio-recorder'],
   },
 });
 ```
 
+## Development checks
+
+Run `pnpm test` for unit tests. Install the Playwright browsers once with `pnpm exec playwright install chromium firefox webkit`, then run `pnpm test:e2e`. The browser tests exercise the packed library in a Vite development server and production build. Chromium and Firefox use fake microphones, and WebKit uses a synthetic audio stream.
+
+For manual testing, run `pnpm dev:e2e` and open the printed localhost URL. To test the production bundle, run `pnpm build:e2e` followed by `pnpm preview:e2e`. Both modes use the packed library and your browser's real microphone permission flow. Restart the dev command or rebuild the production app after changing the library or fixture.
+
 ## Credits
-Here's a great [article](https://franzeus.medium.com/record-audio-in-js-and-upload-as-wav-or-mp3-file-to-your-backend-1a2f35dea7e8) that was used for the initial implementation of the MP3 encoder and inspired the creation of these hooks.
+
+The initial MP3 encoder was inspired by [Record Audio in JS and Upload as WAV or MP3 File to Your Backend](https://franzeus.medium.com/record-audio-in-js-and-upload-as-wav-or-mp3-file-to-your-backend-1a2f35dea7e8).
